@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-const ListTemplatesInputSchema = z.object({});
+const ListTemplatesInputSchema = z
+	.object({
+		page: z.number().int().min(1).optional(),
+		limit: z.number().int().min(1).max(100).optional(),
+	})
+	.optional();
 
 export type ListTemplatesInput = z.infer<typeof ListTemplatesInputSchema>;
 

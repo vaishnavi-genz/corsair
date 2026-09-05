@@ -1,6 +1,6 @@
 import { listTemplates } from './list-templates';
 
-export const Example = {
+export const Templates = {
 	listTemplates,
 };
 

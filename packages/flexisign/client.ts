@@ -1,13 +1,42 @@
+import { AuthMissingError } from 'corsair/core';
 import type { ApiRequestOptions, OpenAPIConfig } from 'corsair/http';
 import { ApiError, request } from 'corsair/http';
 
+type FlexisignAPIErrorOptions = {
+	cause?: Error;
+	status?: number;
+	statusText?: string;
+	// Body shape varies by FlexiSign endpoint, so it stays broadly typed;
+	// narrowed only to extract message/code strings when present.
+	body?: unknown;
+	retryAfter?: number;
+};
+
 export class FlexisignAPIError extends Error {
+	public readonly status?: number;
+	public readonly statusText?: string;
+	public readonly body?: unknown;
+	public readonly retryAfter?: number;
+
 	constructor(
 		message: string,
 		public readonly code?: string,
+		options: FlexisignAPIErrorOptions = {},
 	) {
-		super(message);
+		super(message, options);
 		this.name = 'FlexisignAPIError';
+
+		if (options.cause instanceof ApiError) {
+			this.status = options.cause.status;
+			this.statusText = options.cause.statusText;
+			this.body = options.cause.body;
+			this.retryAfter = options.cause.retryAfter;
+		} else {
+			this.status = options.status;
+			this.statusText = options.statusText;
+			this.body = options.body;
+			this.retryAfter = options.retryAfter;
+		}
 	}
 }
 
@@ -18,10 +47,16 @@ export async function makeFlexisignRequest<T>(
 	apiKey: string,
 	options: {
 		method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+		// Request payloads differ per endpoint with no shared shape, so this
+		// stays a record of unknown values; callers pass zod-validated input.
 		body?: Record<string, unknown>;
 		query?: Record<string, string | number | boolean | undefined>;
 	} = {},
 ): Promise<T> {
+	if (!apiKey.trim()) {
+		throw new AuthMissingError('flexisign', 'api_key');
+	}
+
 	const { method = 'GET', body, query } = options;
 
 	const config: OpenAPIConfig = {
@@ -51,7 +86,24 @@ export async function makeFlexisignRequest<T>(
 		return await request<T>(config, requestOptions);
 	} catch (error) {
 		if (error instanceof ApiError) {
-			throw error;
+			const errorBody = error.body;
+			const message =
+				typeof errorBody === 'object' &&
+				errorBody !== null &&
+				'message' in errorBody &&
+				typeof errorBody.message === 'string'
+					? errorBody.message
+					: error.message;
+
+			const code =
+				typeof errorBody === 'object' &&
+				errorBody !== null &&
+				'code' in errorBody &&
+				typeof errorBody.code === 'string'
+					? errorBody.code
+					: error.status?.toString();
+
+			throw new FlexisignAPIError(message, code, { cause: error });
 		}
 
 		if (error instanceof Error) {

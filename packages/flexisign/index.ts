@@ -13,7 +13,8 @@ import type {
 	RequiredPluginEndpointMeta,
 	RequiredPluginEndpointSchemas,
 } from 'corsair/core';
-import { Example } from './endpoints';
+import { AuthMissingError } from 'corsair/core';
+import { Templates } from './endpoints';
 import type {
 	FlexisignEndpointInputs,
 	FlexisignEndpointOutputs,
@@ -26,7 +27,7 @@ import { errorHandlers } from './error-handlers';
 import { FlexisignSchema } from './schema';
 
 export type FlexisignPluginOptions = {
-	authType?: PickAuth<'api_key' | 'oauth_2'>;
+	authType?: PickAuth<'api_key'>;
 	key?: string;
 	hooks?: InternalFlexisignPlugin['hooks'];
 	errorHandlers?: CorsairErrorHandler;
@@ -60,7 +61,7 @@ export type FlexisignWebhooks = Record<string, never>;
 export type FlexisignBoundWebhooks = BindWebhooks<FlexisignWebhooks>;
 
 const flexisignEndpointsNested = {
-	list: { templates: Example.listTemplates },
+	list: { templates: Templates.listTemplates },
 } as const;
 
 const flexisignWebhooksNested = {} as const;
@@ -81,7 +82,7 @@ const defaultAuthType: AuthTypes = 'api_key' as const;
 const flexisignEndpointMeta = {
 	'list.templates': {
 		riskLevel: 'read',
-		description: 'Get an example resource by ID',
+		description: 'List all available document templates in FlexiSign',
 	},
 } as const satisfies RequiredPluginEndpointMeta<
 	typeof flexisignEndpointsNested
@@ -89,9 +90,6 @@ const flexisignEndpointMeta = {
 
 export const flexisignAuthConfig = {
 	api_key: {
-		account: ['tenant_external_id'] as const,
-	},
-	oauth_2: {
 		account: ['tenant_external_id'] as const,
 	},
 } as const satisfies PluginAuthConfig;
@@ -142,15 +140,13 @@ export function flexisign<const T extends FlexisignPluginOptions>(
 
 			if (source === 'endpoint' && ctx.authType === 'api_key') {
 				const res = await ctx.keys.get_api_key();
-				return res ?? '';
+				if (!res) {
+					throw new AuthMissingError('flexisign', 'api_key');
+				}
+				return res;
 			}
 
-			if (source === 'endpoint' && ctx.authType === 'oauth_2') {
-				const res = await ctx.keys.get_access_token();
-				return res ?? '';
-			}
-
-			return '';
+			throw new AuthMissingError('flexisign', 'api_key');
 		},
 	} satisfies InternalFlexisignPlugin;
 }
