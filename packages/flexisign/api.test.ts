@@ -1,4 +1,5 @@
 import { FlexisignAPIError, makeFlexisignRequest } from './client';
+import type { ListTemplatesResponse } from './endpoints/types';
 import {
 	FlexisignEndpointInputSchemas,
 	FlexisignEndpointOutputSchemas,
@@ -52,7 +53,7 @@ describeLive('Flexisign Live API', () => {
 	it('lists templates with a schema-valid response', async () => {
 		if (!LIVE_API_KEY) throw new Error('FLEXISIGN_API_KEY is required');
 
-		const raw = await makeFlexisignRequest<unknown>(
+		const raw = await makeFlexisignRequest<ListTemplatesResponse>(
 			'/v1/templates/all',
 			LIVE_API_KEY,
 			{ method: 'GET', query: { page: 1, limit: 10 } },
@@ -68,9 +69,13 @@ describeLive('Flexisign Live API', () => {
 	it('rejects an invalid key with an auth error (no retries)', async () => {
 		let caught: Error;
 		try {
-			await makeFlexisignRequest<unknown>('/v1/templates/all', 'invalid-key', {
-				method: 'GET',
-			});
+			await makeFlexisignRequest<ListTemplatesResponse>(
+				'/v1/templates/all',
+				'invalid-key',
+				{
+					method: 'GET',
+				},
+			);
 			throw new Error('expected the request to throw');
 		} catch (error) {
 			if (!(error instanceof Error)) throw new Error('expected an Error');

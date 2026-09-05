@@ -15,6 +15,8 @@ type FlexisignAPIErrorOptions = {
 export class FlexisignAPIError extends Error {
 	public readonly status?: number;
 	public readonly statusText?: string;
+	// Mirrors ApiError.body from corsair/http, which is itself broadly typed;
+	// read only through typeof-narrowed access in the client below.
 	public readonly body?: unknown;
 	public readonly retryAfter?: number;
 

@@ -1,6 +1,7 @@
 import type { CorsairErrorHandler } from 'corsair/core';
 import { ApiError, request } from 'corsair/http';
 import { FlexisignAPIError, makeFlexisignRequest } from './client';
+import type { ListTemplatesResponse } from './endpoints/types';
 import { errorHandlers } from './error-handlers';
 
 jest.mock('corsair/http', () => {
@@ -46,7 +47,10 @@ describe('Flexisign error handlers', () => {
 		mockRequest.mockRejectedValueOnce(transportError(429, 'Slow Down'));
 		let caught: Error;
 		try {
-			await makeFlexisignRequest<unknown>('/v1/templates/all', 'key');
+			await makeFlexisignRequest<ListTemplatesResponse>(
+				'/v1/templates/all',
+				'key',
+			);
 			throw new Error('expected makeFlexisignRequest to throw');
 		} catch (error) {
 			if (!(error instanceof Error)) throw new Error('expected an Error');

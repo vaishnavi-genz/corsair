@@ -1,6 +1,7 @@
 import { AuthMissingError } from 'corsair/core';
 import { ApiError, request } from 'corsair/http';
 import { FlexisignAPIError, makeFlexisignRequest } from './client';
+import type { ListTemplatesResponse } from './endpoints/types';
 
 jest.mock('corsair/http', () => {
 	const actual = jest.requireActual('corsair/http');
@@ -77,10 +78,11 @@ describe('makeFlexisignRequest', () => {
 	it('wraps ApiError preserving status for error-handler routing', async () => {
 		mockRequest.mockRejectedValueOnce(apiError(401, 'Unauthorized'));
 
-		const caught: unknown = await makeFlexisignRequest(
-			'/v1/templates/all',
-			'bad-key',
-		).catch((error: Error) => error);
+		const caught: ListTemplatesResponse | Error =
+			await makeFlexisignRequest<ListTemplatesResponse>(
+				'/v1/templates/all',
+				'bad-key',
+			).catch((error: Error) => error);
 		expect(caught).toBeInstanceOf(FlexisignAPIError);
 		if (caught instanceof FlexisignAPIError) {
 			expect(caught.status).toBe(401);

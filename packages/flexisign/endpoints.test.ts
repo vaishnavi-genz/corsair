@@ -48,14 +48,17 @@ const templateListResponse = {
 	message: 'Data Sent Sucessfully',
 };
 
-// Minimal endpoint context: only `key` is read by listTemplates, the rest is
-// structural filler for the FlexisignContext type (narrowed via unknown to
-// avoid broadening the test surface with `any`).
+// Minimal endpoint context. listTemplates reads only `ctx.key` (event logging
+// is mocked below), so the remaining context members are unneeded here. A
+// full FlexisignContext also carries the endpoint tree, db clients, plugin
+// options, and the account key manager (DEK ops plus field accessors), which
+// cannot be meaningfully constructed in a unit test — hence one narrow
+// assertion, which is safe because the endpoint never touches those members.
 function createMockContext(key = 'test-api-key'): FlexisignContext {
 	return {
 		key,
 		$getAccountId: () => Promise.resolve('test-account-id'),
-	} as unknown as FlexisignContext;
+	} as FlexisignContext;
 }
 
 describe('Flexisign list.templates endpoint', () => {
